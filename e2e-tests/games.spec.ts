@@ -86,6 +86,32 @@ test.describe('Game Listing and Navigation', () => {
     });
   });
 
+  test('should filter games by category and publisher', async ({ page }) => {
+    await test.step('Navigate to homepage', async () => {
+      await page.goto('/');
+      await expect(page.getByTestId('games-grid')).toBeVisible();
+    });
+
+    await test.step('Filter to the Strategy category', async () => {
+      await page.getByRole('checkbox', { name: /strategy/i }).check();
+      await expect(page.locator('[data-testid="game-card"]:visible')).toHaveCount(4);
+      await expect(page.getByTestId('results-count')).toContainText('4 games showing');
+    });
+
+    await test.step('Combine the category with a publisher filter', async () => {
+      await page.getByTestId('publisher-filter').selectOption({ label: 'GitHub Games' });
+      await expect(page.locator('[data-testid="game-card"]:visible')).toHaveCount(1);
+      await expect(page.locator('[data-testid="game-card"]:visible')).toContainText('Server Siege');
+      await expect(page.getByTestId('results-count')).toContainText('1 game showing');
+    });
+
+    await test.step('Clear the filter back to the full catalog', async () => {
+      await page.getByRole('checkbox', { name: /strategy/i }).uncheck();
+      await page.getByTestId('publisher-filter').selectOption({ label: 'All publishers' });
+      await expect(page.locator('[data-testid="game-card"]:visible')).toHaveCount(21);
+    });
+  });
+
   test('should display a button to back the game', async ({ page }) => {
     await test.step('Navigate to game details page', async () => {
       await page.goto('/game/1');

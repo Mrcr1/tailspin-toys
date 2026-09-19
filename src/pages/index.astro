@@ -4,10 +4,12 @@ import GameCard from '../components/GameCard.astro';
 import PageHero from '../components/PageHero.astro';
 import EmptyState from '../components/EmptyState.astro';
 import { getDatabase } from '../lib/db';
-import { getAllGames } from '../lib/games';
+import { getAllCategories, getAllGames, getAllPublishers } from '../lib/games';
 
 export const prerender = true;
 
+const categories = await getAllCategories(getDatabase());
+const publishers = await getAllPublishers(getDatabase());
 const games = await getAllGames(getDatabase());
 ---
 
@@ -18,16 +20,116 @@ const games = await getAllGames(getDatabase());
       subtitle="Find your next game! And maybe even back one! Explore our collection!"
     />
 
+    <div class="mb-8 rounded-xl border border-slate-700 bg-slate-800/60 p-5 shadow-lg" data-testid="game-filters">
+      <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div class="flex-1">
+          <h2 class="mb-3 text-lg font-semibold text-slate-100">Filter games</h2>
+          <div class="flex flex-wrap gap-3" data-testid="category-filters" aria-label="Filter games by category">
+            {categories.map((category) => (
+              <label
+                class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-600 bg-slate-900/60 px-3 py-2 text-sm text-slate-200 transition-colors hover:border-blue-400 hover:text-white focus-within:ring-2 focus-within:ring-blue-500"
+                data-testid={`category-filter-${category.id}`}
+              >
+                <input
+                  type="checkbox"
+                  name="category"
+                  value={category.id}
+                  class="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-2 focus:ring-blue-500"
+                  data-testid={`category-checkbox-${category.id}`}
+                  aria-label={`Filter games by category ${category.name}`}
+                />
+                <span>{category.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div class="min-w-0 lg:max-w-xs">
+          <label for="publisher-filter" class="mb-2 block text-sm font-medium text-slate-200">
+            Publisher
+          </label>
+          <select
+            id="publisher-filter"
+            name="publisher"
+            class="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 shadow-sm transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            data-testid="publisher-filter"
+            aria-label="Filter games by publisher"
+          >
+            <option value="">All publishers</option>
+            {publishers.map((publisher) => (
+              <option value={publisher.id} data-testid={`publisher-option-${publisher.id}`}>
+                {publisher.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-4 text-sm text-slate-300" data-testid="results-count" aria-live="polite">
+      {games.length} game{games.length === 1 ? '' : 's'} showing
+    </div>
+
     <div>
       <h2 class="text-2xl font-medium mb-6 text-slate-100">Featured Games</h2>
 
       {games.length === 0 ? (
-        <EmptyState text="No games available at the moment." />
+        <EmptyState text="No games are available at the moment." />
       ) : (
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="games-grid">
-          {games.map((game) => <GameCard game={game} />)}
-        </div>
+        <>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="games-grid">
+            {games.map((game) => <GameCard game={game} />)}
+          </div>
+          <div data-testid="no-results-state" hidden>
+            <EmptyState text="No games match the selected filters." />
+          </div>
+        </>
       )}
     </div>
   </div>
+
+  <script is:inline>
+    const categoryCheckboxes = Array.from(document.querySelectorAll('[data-testid^="category-checkbox-"]'));
+    const publisherFilter = document.querySelector('[data-testid="publisher-filter"]');
+    const gameCards = Array.from(document.querySelectorAll('[data-testid="game-card"]'));
+    const noResultsState = document.querySelector('[data-testid="no-results-state"]');
+    const resultsCount = document.querySelector('[data-testid="results-count"]');
+
+    const updateGames = () => {
+      const selectedCategories = categoryCheckboxes
+        .filter((checkbox) => checkbox.checked)
+        .map((checkbox) => Number(checkbox.value));
+      const selectedPublisher = publisherFilter && publisherFilter.value ? Number(publisherFilter.value) : null;
+
+      let visibleCount = 0;
+
+      gameCards.forEach((card) => {
+        const cardCategoryId = card.dataset.categoryIds ? Number(card.dataset.categoryIds) : null;
+        const cardPublisherId = card.dataset.publisherId ? Number(card.dataset.publisherId) : null;
+        const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(cardCategoryId);
+        const matchesPublisher = selectedPublisher === null || cardPublisherId === selectedPublisher;
+        const shouldDisplay = matchesCategory && matchesPublisher;
+
+        card.hidden = !shouldDisplay;
+        if (shouldDisplay) {
+          visibleCount += 1;
+        }
+      });
+
+      if (noResultsState) {
+        noResultsState.hidden = visibleCount !== 0;
+      }
+
+      if (resultsCount) {
+        resultsCount.textContent = `${visibleCount} game${visibleCount === 1 ? '' : 's'} showing`;
+      }
+    };
+
+    categoryCheckboxes.forEach((checkbox) => checkbox.addEventListener('change', updateGames));
+    if (publisherFilter) {
+      publisherFilter.addEventListener('change', updateGames);
+    }
+
+    updateGames();
+  </script>
 </Layout>
