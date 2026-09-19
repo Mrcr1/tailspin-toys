@@ -89,4 +89,4 @@ Before finalizing tests, ensure:
 - [ ] Tests are grouped logically and follow a clear structure
 - [ ] Assertions are meaningful and reflect user expectations
 - [ ] Tests follow consistent naming conventions
-- [ ] Code is properly formatted and commented
+- [ ] Code follows the repository TypeScript formatting rules and comments explain intent rather than restating code
