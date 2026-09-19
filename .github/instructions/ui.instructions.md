@@ -20,6 +20,12 @@ Refer to technology-specific instruction files:
 
 ## Core Principles
 
+### Comments and Component Documentation
+
+- Comment why a UI decision exists, such as an accessibility constraint, browser workaround, or intentional design tradeoff. Do not add comments that merely describe the HTML or repeat a class name.
+- Keep comments current with the markup and behavior; stale comments are defects and should be corrected or removed in the same change.
+- Every reusable `.astro` component must document its `Props` interface and any non-obvious prop contract.
+
 ### Testability
 
 - Every interactive element MUST include a `data-testid` attribute
